@@ -1,12 +1,9 @@
 file(GLOB SOURCE_FILES "*.cpp" "*.h" "*.hpp") 
 
 find_package(Maya REQUIRED)
-# if (WIN32)
+
 include_directories(${MAYA_INCLUDE_DIR} ${PARENT_DIR}/rigSystem)
 
-#else()
-#	include_directories(${MAYA_INCLUDE_DIR} "/Users/Shared/Autodesk/maya/scripts/wrappers/CarbonRigSystem/mayaFunctions/plugins/cpp/rigSystem/rigSystem")
-#endif()
 link_directories(${MAYA_LIBRARY_DIR})
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
@@ -18,10 +15,6 @@ install(TARGETS ${PROJECT_NAME} ${MAYA_TARGET_TYPE} DESTINATION plug-ins)
 
 add_definitions(-D_BOOL -DREQUIRE_IOSTREAM -DMAYA_VERSION=${MAYA_VERSION})
 
-
-
-# target_compile_options(${PROJECT_NAME} PRIVATE -fexceptions)
-#@todo find out how to set exceptiond for inline noexcept codes!!
 
 if (APPLE)
    add_definitions(-DOSMac_ -DMAC_PLUGIN)
