@@ -16,6 +16,7 @@ const MString RigSystemControlNode::kSelectionMaskName = "RigSystemControlNodeSe
 MString	RigSystemControlNode::drawDbClassification("drawdb/geometry/ControlNode");
 MString	RigSystemControlNode::drawRegistrantId("ControlNodePlugin");
 
+
 // --- MPxLocatorNode
 MStatus RigSystemControlNode::preEvaluation( const MDGContext& context, const MEvaluationNode& evaluationNode){
 	if (context.isNormal())	{
@@ -79,6 +80,8 @@ MBoundingBox RigSystemControlDrawOverride::boundingBox( const MDagPath& objPath,
 
 
 MUserData* RigSystemControlDrawOverride::prepareForDraw(const MDagPath& objPath,const MDagPath& cameraPath,const MHWRender::MFrameContext& frameContext,MUserData* oldData){
+	MProfilingScope profilerScope(gProfilerCategory, MProfiler::kColorA_L1, "MPxDrawOverride::prepareForDraw()");
+
 	RigSystemControlData* data = dynamic_cast<RigSystemControlData*>(oldData);
 	if (!data)	{
 		data = new RigSystemControlData();
@@ -141,8 +144,10 @@ MUserData* RigSystemControlDrawOverride::prepareForDraw(const MDagPath& objPath,
 	return data;
 }
 
-void RigSystemControlDrawOverride::addUIDrawables( const MDagPath& objPath, MHWRender::MUIDrawManager& drawManager, const MHWRender::MFrameContext& frameContext, const MUserData* data)
-{
+void RigSystemControlDrawOverride::addUIDrawables( const MDagPath& objPath, MHWRender::MUIDrawManager& drawManager, const MHWRender::MFrameContext& frameContext, const MUserData* data){
+	
+	MProfilingScope profilerScope(gProfilerCategory, MProfiler::kColorD_L2, "MPxDrawOverride::addUIDrawables()");
+
 	RigSystemControlData* pLocatorData = (RigSystemControlData*)data;
 	if (!pLocatorData)
 	{

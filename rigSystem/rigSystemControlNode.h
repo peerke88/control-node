@@ -35,6 +35,11 @@ namespace rapidjson { typedef size_t SizeType; }
 #include <maya/MFnDependencyNode.h>
 #include <maya/MSelectionList.h>
 #include <maya/MQuaternion.h>
+#include <maya/MEvaluationManager.h>
+#include <maya/MEvaluationNode.h>
+#include <maya/MProfiler.h>
+#include <maya/MStreamUtils.h>
+
 #include "utils.hpp"
 #include "rapidjson/document.h"
 
@@ -43,9 +48,9 @@ namespace rapidjson { typedef size_t SizeType; }
 #include <resources.h>
 
 using namespace std;
-
-
 using namespace rapidjson;
+
+static int gProfilerCategory = 0;
  
 namespace {
 	std::map<std::string, MPointArray> jsonDataParse() {
@@ -80,6 +85,7 @@ namespace {
 class RigSystemControlNode : public MPxLocatorNode{
 public:
 	MStatus compute(const MPlug& plug, MDataBlock& data) override { 
+		MProfilingScope profilerScope(gProfilerCategory, MProfiler::kColorA_L3, "MPxLocator::compute()");
 		return MS::kSuccess;
 	};
 	

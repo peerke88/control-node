@@ -14,6 +14,7 @@
 
 #include <maya/MObject.h>
 #include <maya/MGlobal.h>
+#include <maya/MProfiler.h>
 
 
 #include "rigSystemControlNode.h"
@@ -37,6 +38,8 @@ MStatus initializePlugin(MObject obj)
 	
 	MString cmd1 = "cacheEvaluator -newFilter \"nodeTypes\" -newFilterParam \"types=+RigSystemControl\" -newAction \"enableEvaluationCache\";";
 	MGlobal::executeCommand(cmd1);
+
+	gProfilerCategory = MProfiler::addCategory("RSControl", "Time taken by RSControlNode");
 
 	return MS::kSuccess;
 };

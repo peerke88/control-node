@@ -33,3 +33,20 @@ building the plugin is as simple as launching the *Build_maya_plugins.bat* file
 - the locator is created using the MPxLocator and MPxDrawOverride with MUIDrawManager, this is all derived from the *footPrintNode.h* included in the maya devkit examples
 
 - vp1 is completely removed as there is no need for it.
+
+- added profiling tags into the MPxDrawOverride functions
+
+- in the comp folder the latest compiled version of the plugin can be found for maya 2022
+
+
+## quick test python script:
+
+```python
+from maya import cmds
+fname = r"#~~~~\control-node\comp\Maya2022\plug-ins\rigSystem.mll"
+cmds.loadPlugin(fname)
+
+for i in range(100):
+    cmds.createNode("RigSystemControl")
+
+```

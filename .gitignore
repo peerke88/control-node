@@ -32,6 +32,6 @@
 *.app
 
 # folders
-comp/
+# comp/
 build/
 rapidjson/
