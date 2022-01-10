@@ -88,11 +88,7 @@ public:
 		MProfilingScope profilerScope(gProfilerCategory, MProfiler::kColorA_L3, "MPxLocator::compute()");
 		return MS::kSuccess;
 	};
-	
-	bool isBounded() const override { 
-		return true; 
-	};
-	
+
 	SchedulingType schedulingType() const override { 
 		return SchedulingType::kParallel; 
 	}
@@ -110,6 +106,7 @@ public:
   	};
 	
 	static	MTypeId	id;
+	
 	static MString	drawDbClassification;
 	static MString	drawRegistrantId;
 

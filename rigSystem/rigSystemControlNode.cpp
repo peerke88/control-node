@@ -59,16 +59,10 @@ void RigSystemControlDrawOverride::OnModelEditorChanged(void *clientData){
 
 
 MBoundingBox RigSystemControlDrawOverride::boundingBox( const MDagPath& objPath, const MDagPath& cameraPath) const{
-	MObject thisNode = objPath.node();
-	MPlug plug(thisNode, RigSystemControlNode::size);
-	MDistance sizeVal;
-	plug.getValue(sizeVal);
-
-	MPlug plug1(thisNode, RigSystemControlNode::controlList);
-	int enumInt;
-	plug1.getValue(enumInt);
-	MPlug plug2(thisNode, RigSystemControlNode::offsetMatrix);
-	MMatrix offsetMatrix = plug2.asMDataHandle().asMatrix();
+	MDistance sizeVal = getPlugValue<MDistance>(objPath, RigSystemControlNode::size, 1.0);
+	int enumInt = getPlugValue<int>(objPath, RigSystemControlNode::controlList, 0);
+	MPlug plug(fRigSystemControl, RigSystemControlNode::offsetMatrix);
+	MMatrix offsetMatrix = plug.asMDataHandle().asMatrix();
 	
 	std::vector<MPointArray> shapePoints;
 	for ( const auto &myPair : control_shapes ) {
@@ -87,39 +81,15 @@ MUserData* RigSystemControlDrawOverride::prepareForDraw(const MDagPath& objPath,
 		data = new RigSystemControlData();
 	}
 
-	float sizeVal = 1.0f;
-	int enumInt = 0;
-	MMatrix offsetMatrix;
-	bool inFill = false;
-	bool inFront = false;
-	float thickness = 1.0f;
-
-	MStatus status;
-	MObject RigSystemControlNode = fRigSystemControl;
-	if (status) {
-		MPlug plug(RigSystemControlNode, RigSystemControlNode::size);
-		plug.getValue(sizeVal);
-
-		MPlug plug1(RigSystemControlNode, RigSystemControlNode::controlList);
-		plug1.getValue(enumInt);
-
-		MPlug plug2(RigSystemControlNode, RigSystemControlNode::offsetMatrix);
-		offsetMatrix = plug2.asMDataHandle().asMatrix();
-
-		MPlug plug3(RigSystemControlNode, RigSystemControlNode::fill);
-		plug3.getValue(inFill);
-
-		MPlug plug6(RigSystemControlNode, RigSystemControlNode::front);
-		plug6.getValue(inFront);
-
-		MPlug plug8(RigSystemControlNode, RigSystemControlNode::lineThickness);
-		plug8.getValue(thickness);
-	};
+	MPlug plug(fRigSystemControl, RigSystemControlNode::offsetMatrix);
+	MMatrix offsetMatrix = plug.asMDataHandle().asMatrix();
+	double sizeVal = getPlugValue<double>(objPath, RigSystemControlNode::size, 1.0);
+	int enumInt = getPlugValue<int>(objPath, RigSystemControlNode::controlList, 0);
 
 	data->fDepthPriority = 5;
-	data->fillObject = inFill;
-	data->drawInFront = inFront;
-	data->lineThick = thickness;
+	data->fillObject =  getPlugValue<bool>(objPath, RigSystemControlNode::fill, false); 
+	data->drawInFront = getPlugValue<bool>(objPath, RigSystemControlNode::front, false);
+	data->lineThick = getPlugValue<float>(objPath, RigSystemControlNode::lineThickness, 1.0);
 	data->fColor = MHWRender::MGeometryUtilities::wireframeColor(objPath);
 
 	std::vector<MPointArray> shapePoints;
@@ -135,7 +105,7 @@ MUserData* RigSystemControlDrawOverride::prepareForDraw(const MDagPath& objPath,
 	}
 
 	data->fTriangleList.clear();
-	if (inFill == true) {
+	if (data->fillObject == true) {
 		for (unsigned int c = 0; c < shapePoints[enumInt].length(); c++) {
 			data->fTriangleList.append((shapePoints[enumInt][c] * sizeVal) * offsetMatrix);
 		}
@@ -155,19 +125,19 @@ void RigSystemControlDrawOverride::addUIDrawables( const MDagPath& objPath, MHWR
 	}
 	
 	drawManager.beginDrawable();
-	if (pLocatorData->drawInFront == true) {
+	if (pLocatorData->drawInFront) {
 		drawManager.beginDrawInXray();
 	}
 	drawManager.setLineWidth(pLocatorData->lineThick);
 	drawManager.setColor(pLocatorData->fColor);
 	drawManager.setDepthPriority(pLocatorData->fDepthPriority);
 
-	if (pLocatorData->fillObject == true ){
+	if (pLocatorData->fillObject ){
 		drawManager.mesh(MHWRender::MUIDrawManager::kTriangles, pLocatorData->fTriangleList);
 	}
 
 	drawManager.mesh(MHWRender::MUIDrawManager::kLines, pLocatorData->fLineList);
-	if (pLocatorData->drawInFront == true) {
+	if (pLocatorData->drawInFront) {
 		drawManager.endDrawInXray();
 	}
 	drawManager.endDrawable();

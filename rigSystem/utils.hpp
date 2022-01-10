@@ -33,5 +33,25 @@ inline MBoundingBox getBoundingBox(MPointArray inPoints, MDistance sizeValue, MM
 	return MBoundingBox(corner1, corner2);
 }
 
+template <typename T>
+inline T getPlugValue(const MDagPath& mDagPath, const MObject& mPlug, const T default_value)
+{
+	MStatus status;
+	const MObject mObject = mDagPath.node(&status);
+	if (status)
+	{
+		MPlug plug(mObject, mPlug);
+		if (!plug.isNull())
+		{
+			T value;
+			if (plug.getValue(value))
+			{
+				return value;
+			}
+		}
+	}
+	return default_value;
+}
+
 #define UTILS_HPP
 #endif
