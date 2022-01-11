@@ -32,13 +32,14 @@ namespace rapidjson { typedef size_t SizeType; }
 #include <maya/MPointArray.h>
 #include <maya/MGlobal.h>
 #include <maya/MEventMessage.h>
-#include <maya/MFnDependencyNode.h>
 #include <maya/MSelectionList.h>
 #include <maya/MQuaternion.h>
 #include <maya/MEvaluationManager.h>
 #include <maya/MEvaluationNode.h>
 #include <maya/MProfiler.h>
 #include <maya/MStreamUtils.h>
+#include <maya/MFnDependencyNode.h>
+#include <maya/MUuid.h>
 
 #include "utils.hpp"
 #include "rapidjson/document.h"
@@ -46,6 +47,8 @@ namespace rapidjson { typedef size_t SizeType; }
 #include <string>
 #include <iostream>
 #include <resources.h>
+#include <unordered_map>
+
 
 using namespace std;
 using namespace rapidjson;
@@ -84,31 +87,44 @@ namespace {
 
 class RigSystemControlNode : public MPxLocatorNode{
 public:
-	MStatus compute(const MPlug& plug, MDataBlock& data) override { 
-		MProfilingScope profilerScope(gProfilerCategory, MProfiler::kColorA_L3, "MPxLocator::compute()");
-		return MS::kSuccess;
-	};
+	static  void *  creator() { return new RigSystemControlNode(); 	};
+	
+	static  MStatus initialize();
+
+	RigSystemControlNode() { ud = new RigSystemControlData; };
+	~RigSystemControlNode () { if (handle != 0) instances.erase(handle); };
+
+	virtual MStatus	compute(const MPlug& p, MDataBlock& b);
 
 	SchedulingType schedulingType() const override { 
 		return SchedulingType::kParallel; 
 	}
 	
-	MStatus preEvaluation(const MDGContext& context, const MEvaluationNode& evaluationNode) override;
-
-	static  void *  creator() { 
-		return new RigSystemControlNode(); 
-	};
-	static  MStatus initialize();
-	
 	static const MString kSelectionMaskName;
   	virtual MSelectionMask getShapeSelectionMask() const override { 
   		return MSelectionMask(kSelectionMaskName); 
   	};
-	
+
 	static	MTypeId	id;
-	
 	static MString	drawDbClassification;
 	static MString	drawRegistrantId;
+
+private:
+	friend class RigSystemControlDrawOverride;
+	class RigSystemControlData : public MUserData{
+	public:
+		float lineThick;
+		// MColor fColor;
+		bool drawInFront;
+		bool fillObject;
+		MPointArray fLineList;
+		MPointArray fTriangleList;
+	};
+	RigSystemControlData* ud;
+
+	static std::unordered_map<size_t, RigSystemControlNode*> instances;
+	size_t handle = 0;
+ 
 
 	static MObject offsetMatrix;
 	static MObject controlList;
@@ -120,22 +136,14 @@ public:
 };
 
 
-class RigSystemControlData : public MUserData{
-public:
-	float lineThick;
-	MColor fColor;
-	bool drawInFront;
-	bool fillObject;
-	unsigned int fDepthPriority;
-	MPointArray fLineList;
-	MPointArray fTriangleList;
-};
 
 class RigSystemControlDrawOverride : public MHWRender::MPxDrawOverride{
 public:
 	static MHWRender::MPxDrawOverride* Creator(const MObject& obj) { 
 		return new RigSystemControlDrawOverride(obj); 
 	}
+
+	// RigSystemControlDrawOverride(const MObject& o) : MHWRender::MPxDrawOverride(o, 0, false) { }
 
 	~RigSystemControlDrawOverride() override;
 
@@ -149,17 +157,10 @@ public:
 	MBoundingBox boundingBox( const MDagPath& objPath, const MDagPath& cameraPath) const override;
 
 	MUserData* prepareForDraw( const MDagPath& objPath, const MDagPath& cameraPath, const MHWRender::MFrameContext& frameContext, MUserData* oldData) override;
-	bool hasUIDrawables() const override { 
+	virtual bool hasUIDrawables() const override { 
 		return true; 
 	}
 	void addUIDrawables( const MDagPath& objPath, MHWRender::MUIDrawManager& drawManager, const MHWRender::MFrameContext& frameContext, const MUserData* data) override;
-
-	bool traceCallSequence() const override{ 
-		return false; 
-	}
-	void handleTraceMessage(const MString &message) const override {
-		MGlobal::displayInfo("RigSystemControlDrawOverride: " + message);
-	}
 
 
 private:

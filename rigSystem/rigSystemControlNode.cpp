@@ -10,26 +10,77 @@ MObject RigSystemControlNode::fill;
 MObject RigSystemControlNode::front;
 MObject RigSystemControlNode::worldS;
 
-
-
 const MString RigSystemControlNode::kSelectionMaskName = "RigSystemControlNodeSelection";
 MString	RigSystemControlNode::drawDbClassification("drawdb/geometry/ControlNode");
 MString	RigSystemControlNode::drawRegistrantId("ControlNodePlugin");
 
 
-// --- MPxLocatorNode
-MStatus RigSystemControlNode::preEvaluation( const MDGContext& context, const MEvaluationNode& evaluationNode){
-	if (context.isNormal())	{
-		MStatus status;
-		if (evaluationNode.dirtyPlugExists(size, &status) && status){
-			MHWRender::MRenderer::setGeometryDrawDirty(thisMObject());
-		}
-	}
+std::unordered_map<size_t, RigSystemControlNode*> RigSystemControlNode::instances;
 
-	return MStatus::kSuccess;
+size_t NodeHash(const MObject& p) {
+    MUuid uuid = MFnDependencyNode(p).uuid();
+    std::string guid = "0000000000000000";
+    uuid.get((unsigned char*)&guid[0]);
+    MString ns = MFnDependencyNode(p).parentNamespace();
+    std::string namesp = ns.asChar();
+    return std::hash<std::string>()(namesp + guid);
 }
 
 
+// --- MPxLocatorNode
+
+MStatus	RigSystemControlNode::compute(const MPlug& p, MDataBlock& b){
+	MProfilingScope profilerScope(gProfilerCategory, MProfiler::kColorA_L3, "MPxLocator::compute()");
+	
+	if (p != worldS) return MS::kUnknownParameter;
+	if (handle == 0) {
+		handle = NodeHash(thisMObject());
+		instances.emplace(handle, this);
+	}
+	MMatrix ofstMatrix = b.inputValue(offsetMatrix).asMatrix();
+	double sizeVal = b.inputValue(size).asDouble();
+	ud->lineThick = b.inputValue(lineThickness).asFloat();
+
+	// ud->fColor = MHWRender::MGeometryUtilities::wireframeColor(objPath); ;
+	ud->drawInFront = b.inputValue(front).asBool();
+	ud->fillObject = b.inputValue(fill).asBool(); ;
+
+	int enumInt = b.inputValue(controlList).asInt();
+	std::vector<MPointArray> shapePoints;
+	for ( const auto &myPair : control_shapes ) {
+    	shapePoints.push_back(myPair.second);
+	}
+
+	ud->fLineList.clear();
+	for (unsigned int c = 0; c < shapePoints[enumInt].length(); c++) {
+		if (c%3 != 0){
+			ud->fLineList.append((shapePoints[enumInt][c] * sizeVal) * ofstMatrix);
+		}
+	}
+
+	ud->fTriangleList.clear();
+	if (ud->fillObject == true) {
+		for (unsigned int c = 0; c < shapePoints[enumInt].length(); c++) {
+			ud->fTriangleList.append((shapePoints[enumInt][c] * sizeVal) * ofstMatrix);
+		}
+	}
+	b.outputValue(worldS).setFloat((float)sizeVal);
+	b.setClean(worldS);
+	return MS::kSuccess;
+}
+ 
+// MStatus RigSystemControlNode::preEvaluation( const MDGContext& context, const MEvaluationNode& evaluationNode){
+// 	if (context.isNormal())	{
+// 		MStatus status;
+// 		if (evaluationNode.dirtyPlugExists(size, &status) && status){
+// 			MHWRender::MRenderer::setGeometryDrawDirty(thisMObject());
+// 		}
+// 	}
+
+// 	return MStatus::kSuccess;
+// }
+
+ 
 // --- MPxDrawOverride
 RigSystemControlDrawOverride::RigSystemControlDrawOverride(const MObject& obj):MHWRender::MPxDrawOverride(obj, NULL, false), fRigSystemControl(obj) {
 	fModelEditorChangedCbId = MEventMessage::addEventCallback( "modelEditorChanged", OnModelEditorChanged, this);
@@ -59,7 +110,7 @@ void RigSystemControlDrawOverride::OnModelEditorChanged(void *clientData){
 
 
 MBoundingBox RigSystemControlDrawOverride::boundingBox( const MDagPath& objPath, const MDagPath& cameraPath) const{
-	MDistance sizeVal = getPlugValue<MDistance>(objPath, RigSystemControlNode::size, 1.0);
+	double sizeVal = getPlugValue<float>(objPath, RigSystemControlNode::size, 1.0);
 	int enumInt = getPlugValue<int>(objPath, RigSystemControlNode::controlList, 0);
 	MPlug plug(fRigSystemControl, RigSystemControlNode::offsetMatrix);
 	MMatrix offsetMatrix = plug.asMDataHandle().asMatrix();
@@ -72,65 +123,28 @@ MBoundingBox RigSystemControlDrawOverride::boundingBox( const MDagPath& objPath,
 	return bbox;
 }
 
-
-MUserData* RigSystemControlDrawOverride::prepareForDraw(const MDagPath& objPath,const MDagPath& cameraPath,const MHWRender::MFrameContext& frameContext,MUserData* oldData){
+MUserData* RigSystemControlDrawOverride::prepareForDraw(const MDagPath& objPath, const MDagPath& cameraPath, const MHWRender::MFrameContext& frameContext, MUserData* oldData){
 	MProfilingScope profilerScope(gProfilerCategory, MProfiler::kColorA_L1, "MPxDrawOverride::prepareForDraw()");
-
-	RigSystemControlData* data = dynamic_cast<RigSystemControlData*>(oldData);
-	if (!data)	{
-		data = new RigSystemControlData();
-	}
-
-	MPlug plug(fRigSystemControl, RigSystemControlNode::offsetMatrix);
-	MMatrix offsetMatrix = plug.asMDataHandle().asMatrix();
-	double sizeVal = getPlugValue<double>(objPath, RigSystemControlNode::size, 1.0);
-	int enumInt = getPlugValue<int>(objPath, RigSystemControlNode::controlList, 0);
-
-	data->fDepthPriority = 5;
-	data->fillObject =  getPlugValue<bool>(objPath, RigSystemControlNode::fill, false); 
-	data->drawInFront = getPlugValue<bool>(objPath, RigSystemControlNode::front, false);
-	data->lineThick = getPlugValue<float>(objPath, RigSystemControlNode::lineThickness, 1.0);
-	data->fColor = MHWRender::MGeometryUtilities::wireframeColor(objPath);
-
-	std::vector<MPointArray> shapePoints;
-	for ( const auto &myPair : control_shapes ) {
-    	shapePoints.push_back(myPair.second);
-	}
-	
-	data->fLineList.clear();
-	for (unsigned int c = 0; c < shapePoints[enumInt].length(); c++) {
-		if (c%3 != 0){
-			data->fLineList.append((shapePoints[enumInt][c] * sizeVal) * offsetMatrix);
-		}
-	}
-
-	data->fTriangleList.clear();
-	if (data->fillObject == true) {
-		for (unsigned int c = 0; c < shapePoints[enumInt].length(); c++) {
-			data->fTriangleList.append((shapePoints[enumInt][c] * sizeVal) * offsetMatrix);
-		}
-	}
-
-	return data;
+	size_t handle = NodeHash(objPath.node());
+	auto it = RigSystemControlNode::instances.find(handle);
+	if (it == RigSystemControlNode::instances.end()) return 0;
+	return (MUserData*)it->second->ud;
 }
 
 void RigSystemControlDrawOverride::addUIDrawables( const MDagPath& objPath, MHWRender::MUIDrawManager& drawManager, const MHWRender::MFrameContext& frameContext, const MUserData* data){
 	
 	MProfilingScope profilerScope(gProfilerCategory, MProfiler::kColorD_L2, "MPxDrawOverride::addUIDrawables()");
 
-	RigSystemControlData* pLocatorData = (RigSystemControlData*)data;
-	if (!pLocatorData)
-	{
-		return;
-	}
+	const RigSystemControlNode::RigSystemControlData* pLocatorData = (const RigSystemControlNode::RigSystemControlData*)data;
+	if (!pLocatorData) return;
 	
 	drawManager.beginDrawable();
 	if (pLocatorData->drawInFront) {
 		drawManager.beginDrawInXray();
 	}
 	drawManager.setLineWidth(pLocatorData->lineThick);
-	drawManager.setColor(pLocatorData->fColor);
-	drawManager.setDepthPriority(pLocatorData->fDepthPriority);
+	// drawManager.setColor(MHWRender::MGeometryUtilities::wireframeColor(objPath));
+	drawManager.setDepthPriority(5);
 
 	if (pLocatorData->fillObject ){
 		drawManager.mesh(MHWRender::MUIDrawManager::kTriangles, pLocatorData->fTriangleList);
@@ -150,7 +164,7 @@ MStatus RigSystemControlNode::initialize()
 	MFnMatrixAttribute mAttr;
 	MFnNumericAttribute nAttr;
 
-	offsetMatrix = mAttr.create("offsetMatrix", "om", MFnMatrixAttribute::kDouble);
+	offsetMatrix = mAttr.create("offsetMatrix", "om");
 	mAttr.setKeyable(false);
 	mAttr.setReadable(true);
 	mAttr.setStorable(true);
@@ -166,8 +180,7 @@ MStatus RigSystemControlNode::initialize()
 	eAttr.setReadable(true);
 	addAttribute(controlList);
 
-	size = uAttr.create("size", "sz", MFnUnitAttribute::kDistance);
-	uAttr.setDefault(1.0);
+	size = nAttr.create("size", "sz", MFnNumericData::kDouble, 1.0);
 	uAttr.setSoftMin(0.0);
 	uAttr.setSoftMax(10.0);
 	addAttribute(size);

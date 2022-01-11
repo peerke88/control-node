@@ -16,9 +16,7 @@
 #include <maya/MGlobal.h>
 #include <maya/MProfiler.h>
 
-
 #include "rigSystemControlNode.h"
-
 
 static const char* VERSION = "4.0.20220110";
 
