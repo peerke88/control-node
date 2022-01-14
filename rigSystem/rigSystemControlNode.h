@@ -87,11 +87,11 @@ namespace {
 
 class RigSystemControlNode : public MPxLocatorNode{
 public:
-	static  void *  creator() { return new RigSystemControlNode(); 	};
+	static  void *  creator() { return new RigSystemControlNode; 	};
 	
 	static  MStatus initialize();
 
-	RigSystemControlNode() { ud = new RigSystemControlData; };
+	RigSystemControlNode() { ud = new UD; };
 	~RigSystemControlNode () { if (handle != 0) instances.erase(handle); };
 
 	virtual MStatus	compute(const MPlug& p, MDataBlock& b);
@@ -111,16 +111,16 @@ public:
 
 private:
 	friend class RigSystemControlDrawOverride;
-	class RigSystemControlData : public MUserData{
+	class UD : public MUserData{
 	public:
-		float lineThick;
-		// MColor fColor;
-		bool drawInFront;
+		double size;
+		bool front;
+		double lineThick;
 		bool fillObject;
 		MPointArray fLineList;
 		MPointArray fTriangleList;
 	};
-	RigSystemControlData* ud;
+	UD* ud;
 
 	static std::unordered_map<size_t, RigSystemControlNode*> instances;
 	size_t handle = 0;
@@ -142,36 +142,17 @@ public:
 	static MHWRender::MPxDrawOverride* Creator(const MObject& obj) { 
 		return new RigSystemControlDrawOverride(obj); 
 	}
-
-	// RigSystemControlDrawOverride(const MObject& o) : MHWRender::MPxDrawOverride(o, 0, false) { }
-
-	~RigSystemControlDrawOverride() override;
+	RigSystemControlDrawOverride(const MObject& o) : MHWRender::MPxDrawOverride(o, 0, false) { }
 
 	MHWRender::DrawAPI supportedDrawAPIs() const override{ 
 		return (MHWRender::kOpenGL | MHWRender::kDirectX11 | MHWRender::kOpenGLCoreProfile); 
 	};
-
-	bool isBounded( const MDagPath& objPath, const MDagPath& cameraPath) const override { 
-		return true; 
-	};
-	MBoundingBox boundingBox( const MDagPath& objPath, const MDagPath& cameraPath) const override;
 
 	MUserData* prepareForDraw( const MDagPath& objPath, const MDagPath& cameraPath, const MHWRender::MFrameContext& frameContext, MUserData* oldData) override;
 	virtual bool hasUIDrawables() const override { 
 		return true; 
 	}
 	void addUIDrawables( const MDagPath& objPath, MHWRender::MUIDrawManager& drawManager, const MHWRender::MFrameContext& frameContext, const MUserData* data) override;
-
-
-private:
-	RigSystemControlDrawOverride(const MObject& obj);
-
-	static void OnModelEditorChanged(void *clientData);
-
-	RigSystemControlNode*  fRigSystemControlNode;
-	MCallbackId fModelEditorChangedCbId;
-	MObject fRigSystemControl;
-	
 };
 
 #define RIGSYSTEM_CONTROL_NODE
