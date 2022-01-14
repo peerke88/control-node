@@ -37,6 +37,8 @@ building the plugin is as simple as launching the *Build_maya_plugins.bat* file
 - added profiling tags into the MPxDrawOverride functions
 
 - in the comp folder the latest compiled version of the plugin can be found for maya 2022
+  
+- prepareForDraw elements have been moved over to compute
 
 
 ## quick test python script:
@@ -50,3 +52,8 @@ for i in range(100):
     cmds.createNode("RigSystemControl")
 
 ```
+
+## thanks
+
+* Marcus Ottosson: for helping out and pointing me in the right direction
+* Trevor v Hoof: for helping with general C++ shenanigans and porting elements over from prepareForDraw to Compute
