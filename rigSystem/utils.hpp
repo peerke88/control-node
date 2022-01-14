@@ -9,7 +9,7 @@
 #include <iostream>
 #include <limits>
 
-inline MBoundingBox getBoundingBox(MPointArray inPoints, MDistance sizeValue, MMatrix offsetMatrix){
+inline MBoundingBox getBoundingBox(MPointArray inPoints, double sizeValue, MMatrix offsetMatrix){
 	double minX = std::numeric_limits<double>::max();
 	double minY = std::numeric_limits<double>::max();
 	double minZ = std::numeric_limits<double>::max();
@@ -17,10 +17,8 @@ inline MBoundingBox getBoundingBox(MPointArray inPoints, MDistance sizeValue, MM
 	double maxY = -std::numeric_limits<double>::max();
 	double maxZ = -std::numeric_limits<double>::max();
 
-	double multiplier = sizeValue.asCentimeters();
-
 	for (unsigned int c = 0; c < inPoints.length(); c++) {
-		MPoint key = (inPoints[c]* multiplier)*offsetMatrix;
+		MPoint key = (inPoints[c]* sizeValue)*offsetMatrix;
 		minX = std::min(key.x, minX);
 		minY = std::min(key.y, minY);
 		minZ = std::min(key.z, minZ);

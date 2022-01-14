@@ -6,7 +6,6 @@ cd %~dp0\rigSystem
 python resourcecompiler.py
 echo "build resources.h"
 
-pause
 
 set list= 2022
 
